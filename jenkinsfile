@@ -31,6 +31,7 @@ pipeline {
         stage('Authenticate with GCP') {
             steps {
                 script {
+                    echo "hi"
                     withCredentials([file(credentialsId: cd 'gcp-service-account-key', variable: 'SERVICE_ACCOUNT_KEY')]) {
                         sh "gcloud auth activate-service-account --key-file=${SERVICE_ACCOUNT_KEY}"
                     }
