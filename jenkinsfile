@@ -1,0 +1,141 @@
+def imageSource = "regevamit/apache-dep-rtg"
+def deploymentName = "apache-dep-rtg"
+def namespaceName = "apache-project-rtg"
+def labelName = "my-apache-rtg"
+def containerName = "apache-rtg"
+def containerPort = 80
+def webAddress = "apache.yankeespro.com"
+def svcPort = 1234
+def controllerNS = "nginx-ingress"
+
+pipeline {
+    agent {label 'my_gcp_slave'}
+
+     environment {
+       CLUSTERNAME = 'test-cluster'
+       ZONE = 'europe-west1-b'
+       CREDS = credentials('ca585f6b-23d5-4131-8d32-e9ad6c2efa75')
+       GCP_RESOURCE_CREDENTIALS = credentials('gcp-service-account-key')
+       PROJECT_ID = 'proud-shoreline-420009'
+       DNS_ZONE = 'yankeespro-com'
+    }  
+
+    stages {
+        stage("Clean Workspace"){
+            steps {
+                cleanWs()
+                sh 'git clone https://$CREDS@github.com/regevamit94/pull_push_dep.git'
+            }
+        }
+
+        stage('Authenticate with GCP') {
+            steps {
+                script {
+                    withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'SERVICE_ACCOUNT_KEY')]) {
+                        sh "gcloud auth activate-service-account --key-file=${SERVICE_ACCOUNT_KEY}"
+                    }
+                }
+            }
+        }
+
+        stage('Check if Cluster exists') {
+            steps {
+                script {
+                    def statusCode = sh(script: "gcloud container clusters describe $CLUSTERNAME --zone=$ZONE  >/dev/null", returnStatus: true)
+                    if (statusCode == 0) {
+                        echo "Kubernetes cluster '$CLUSTERNAME' is already running!"
+                    } else {
+                        echo "Kubernetes cluster '$CLUSTERNAME' is not running. It will be created now."
+                        sh "gcloud container clusters create $CLUSTERNAME --zone=$ZONE"
+                    
+                    }
+                }
+            }
+        }
+
+        stage('Create Image and upload to Docker hub') {
+            steps {
+                script {
+                    sh "docker build -t apache-dep ."
+                    sh "docker tag apache-dep apache-dep-${currentBuild.number}"
+                }
+            }
+        }
+        stage('Check if Ingress controller exists') {
+            steps {
+                script{
+                    def statusCode = sh(script: "kubectl get svc -A | grep -w nginx-ingress-ingress-nginx-controller >/dev/null", returnStatus: true)
+                    echo "${statusCode}"
+                    if (statusCode == 0) {
+                        echo "The nginx ingress controller is already running"
+                    } else {
+                            def helmstatus = sh(script: "helm version", returnStatus: true)
+                            if (helmstatus == 0) {
+                                echo "Helm is installed"
+                                echo "Applying the NGINX-ingress-controller"
+                                echo "helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && helm repo update"
+                                sh "helm show values ingress-nginx/ingress-nginx > values.yaml"
+                                sh "helm install nginx-ingress ingress-nginx/ingress-nginx -f values.yaml"
+                            } else{
+                                echo "Installing helm..."
+                                sh "curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+                                sh "chmod 700 get_helm.sh"
+                                echo "Applying the NGINX-ingress-controller..."
+                                sh "helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && helm repo update"
+                                sh "helm show values ingress-nginx/ingress-nginx > values.yaml"
+                                sh "helm install nginx-ingress ingress-nginx/ingress-nginx -f values.yaml --set namespaceOverride=$controllerNS"
+
+                            }
+
+
+                    }
+                }
+            }
+        }
+            
+                   
+        stage('Check if deployment exists') {
+                steps{
+                    script{
+                        sh "gcloud container clusters get-credentials '$CLUSTERNAME' --zone $ZONE  >/dev/null"
+                        def statusCode = sh(script: "kubectl get deployments -n $namespaceName | grep -w $deploymentName >/dev/null || exit 1 ", returnStatus: true)
+                        if (statusCode == 1) {
+                            echo 'Creating deployment and applying service&ingress'
+                            sh "sed -i 's/\${deploymentName}/$deploymentName/' jenkins_listens/deployment.yaml"
+                            sh "sed -i 's/\${labelName}/$labelName/' jenkins_listens/deployment.yaml jenkins_listens/service.yaml"
+                            sh "sed -i 's/\${containerName}/$containerName/' jenkins_listens/deployment.yaml"
+                            sh "sed -i 's#\${imageSource}#$imageSource#' jenkins_listens/deployment.yaml"
+                            sh "sed -i 's#\${namespaceName}#$namespaceName#' jenkins_listens/deployment.yaml jenkins_listens/service.yaml jenkins_listens/ingress.yaml" 
+                            sh "sed -i 's/\${containerPort}/$containerPort/' jenkins_listens/deployment.yaml jenkins_listens/service.yaml"
+                            sh "sed -i 's/\${webAddress}/$webAddress/' jenkins_listens/ingress.yaml"
+                            sh "sed -i 's/\${svcPort}/$svcPort/' jenkins_listens/ingress.yaml jenkins_listens/service.yaml"
+
+                            sh "kubectl apply -f jenkins_listens/deployment.yaml"
+                            sh "kubectl apply -f jenkins_listens/service.yaml"
+                            sh "kubectl apply -f jenkins_listens/ingress.yaml"
+                            
+
+                        } else {
+                            echo "deployment: '$deploymentName' is already exist. Aborting..."
+
+                        }
+                    }   
+                }   
+            }  
+        stage("Get NGINX Ingress controller IP") {
+            steps {
+                script {
+                    def externalIP = sh(script: "kubectl get svc nginx-ingress-ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'", returnStdout: true)
+                    if (externalIP) {
+                    echo "The NGINX controller external IP address is: ${externalIP}. The '$webAddress' domains's A record must be edited to point to this IP Address"
+                    } else {
+                        echo "NGINX Ingress controller has no EXTERNAL-IP. Aborting action..."
+                    }
+                }
+            }
+        }
+    
+    }  
+
+ }
+ 
