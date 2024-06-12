@@ -28,7 +28,7 @@ pipeline {
             }
         }
 
-        stage('Authenticate with GCP') {
+        /*stage('Authenticate with GCP') {
             steps {
                 script {
                     echo "hi"
@@ -37,7 +37,7 @@ pipeline {
                     }
                 }
             }
-        }
+        }*/
 
         stage('Check if Cluster exists') {
             steps {
