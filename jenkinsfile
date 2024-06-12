@@ -57,6 +57,7 @@ pipeline {
         stage('Create Image and upload to Docker hub') {
             steps {
                 script {
+                    sh "pwd"
                     sh "docker build -t apache-dep ."
                     sh "docker tag apache-dep apache-dep-${currentBuild.number}"
                 }
