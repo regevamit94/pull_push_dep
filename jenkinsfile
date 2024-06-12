@@ -101,6 +101,7 @@ pipeline {
                         sh "gcloud container clusters get-credentials '$CLUSTERNAME' --zone $ZONE  >/dev/null"
                         def statusCode = sh(script: "kubectl get deployments -n $namespaceName | grep -w $deploymentName >/dev/null || exit 1 ", returnStatus: true)
                         if (statusCode == 1) {
+                            echo "${env.JOB_NAME}"
                             echo 'Creating deployment and applying service&ingress'
                             sh "sed -i 's/\${deploymentName}/$deploymentName/' ${env.JOB_NAME}/deployment.yaml"
                             sh "sed -i 's/\${labelName}/$labelName/' ${env.JOB_NAME}/deployment.yaml jenkins_listens/service.yaml"
