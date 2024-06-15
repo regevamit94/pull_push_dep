@@ -59,8 +59,8 @@ pipeline {
             steps {
                 script {
                     sh "docker build -t ${imageName} ./${env.JOB_NAME}"
-                    sh "docker tag ${imageName} ${hubUser}/${imageName}-${currentBuild.number}"
-                    sh "docker push ${hubUser}/${imageName}-${currentBuild.number}"
+                    sh "docker tag ${imageName} ${hubUser}/${imageName}:${currentBuild.number}"
+                    sh "docker push ${hubUser}/${imageName}:${currentBuild.number}"
                 }
             }
         }
@@ -114,7 +114,7 @@ pipeline {
                             sh "sed -i 's/\${containerPort}/$containerPort/' ${env.JOB_NAME}/deployment.yaml ${env.JOB_NAME}/service.yaml"
                             sh "sed -i 's/\${webAddress}/$webAddress/' ${env.JOB_NAME}/ingress.yaml"
                             sh "sed -i 's/\${svcPort}/$svcPort/' ${env.JOB_NAME}/ingress.yaml ${env.JOB_NAME}/service.yaml"
-                            sh "sed -i 's#\${imageName}#$hubUser#$imageName-$currentBuild.number#' ${env.JOB_NAME}/deployment.yaml"
+                            sh "sed -i 's/\${imageName}/$hubUser/$imageName:$currentBuild.number/' ${env.JOB_NAME}/deployment.yaml"
 
                             sh "kubectl apply -f ${env.JOB_NAME}/deployment.yaml"
                             sh "kubectl apply -f ${env.JOB_NAME}/service.yaml"
