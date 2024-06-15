@@ -7,7 +7,8 @@ def containerPort = 80
 def webAddress = "apache.yankeespro.com"
 def svcPort = 1234
 def controllerNS = "nginx-ingress"
-def imageName = "regevamit/apache-dep"
+def imageName = "apache-dep"
+def hubUser = "regevamit"
 pipeline {
     agent {label 'my_gcp_slave'}
 
@@ -58,7 +59,7 @@ pipeline {
             steps {
                 script {
                     sh "docker build -t ${imageName} ./${env.JOB_NAME}"
-                    sh "docker tag ${imageName} ${imageName}-${currentBuild.number}"
+                    sh "docker tag ${imageName} ${hubUser}/${imageName}-${currentBuild.number}"
                     sh "docker push apache-dep-${currentBuild.number}"
                 }
             }
