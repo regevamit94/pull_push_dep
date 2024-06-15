@@ -60,7 +60,7 @@ pipeline {
                 script {
                     sh "docker build -t ${imageName} ./${env.JOB_NAME}"
                     sh "docker tag ${imageName} ${hubUser}/${imageName}-${currentBuild.number}"
-                    sh "docker push apache-dep-${currentBuild.number}"
+                    sh "docker push ${hubUser}/${imageName}-${currentBuild.number}"
                 }
             }
         }
