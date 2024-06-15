@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: apache-wp-svc
+  name: apache-dep-svc
   namespace: ${namespaceName}
 spec:
   selector:
@@ -10,4 +10,4 @@ spec:
     - protocol  : TCP
       port      : ${svcPort}  # Port on SVC
       targetPort: ${containerPort}  # Port on POD
-  type: ClusterIP
+  type: LoadBalancer
