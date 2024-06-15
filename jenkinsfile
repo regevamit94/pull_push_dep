@@ -103,6 +103,7 @@ pipeline {
                         if (statusCode == 1) {
                             echo "${env.JOB_NAME}"
                             echo 'Creating deployment and applying service&ingress'
+                            sh "pwd"
                             sh "sed -i 's/\${deploymentName}/$deploymentName/' ${env.JOB_NAME}/deployment.yaml"
                             sh "sed -i 's/\${labelName}/$labelName/' ${env.JOB_NAME}/deployment.yaml ${env.JOB_NAME}/service.yaml"
                             sh "sed -i 's/\${containerName}/$containerName/' /${env.JOB_NAME}/deployment.yaml"
