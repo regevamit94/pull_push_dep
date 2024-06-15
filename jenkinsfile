@@ -1,4 +1,3 @@
-def imageSource = "regevamit/apache-dep-rtg"
 def deploymentName = "apache-dep-rtg"
 def namespaceName = "apache-project-rtg"
 def labelName = "my-apache-rtg"
@@ -9,6 +8,7 @@ def svcPort = 1234
 def controllerNS = "nginx-ingress"
 def imageName = "apache-dep"
 def hubUser = "regevamit"
+def imageSource = "${hubUser}/${imageName}:${currentBuild.number}"
 
 pipeline {
     agent {label 'my_gcp_slave'}
@@ -115,7 +115,6 @@ pipeline {
                             sh "sed -i 's/\${containerPort}/$containerPort/' ${env.JOB_NAME}/deployment.yaml ${env.JOB_NAME}/service.yaml"
                             sh "sed -i 's/\${webAddress}/$webAddress/' ${env.JOB_NAME}/ingress.yaml"
                             sh "sed -i 's/\${svcPort}/$svcPort/' ${env.JOB_NAME}/ingress.yaml ${env.JOB_NAME}/service.yaml"
-                            sh "sed -i 's#\${imageName}#$hubUser#$imageName:$currentBuild.number#' ${env.JOB_NAME}/deployment.yaml"
 
 
                             sh "kubectl apply -f ${env.JOB_NAME}/deployment.yaml"
