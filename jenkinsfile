@@ -7,7 +7,7 @@ def containerPort = 80
 def webAddress = "apache.yankeespro.com"
 def svcPort = 1234
 def controllerNS = "nginx-ingress"
-
+def imageName = "regevamit/apache-dep"
 pipeline {
     agent {label 'my_gcp_slave'}
 
@@ -57,8 +57,8 @@ pipeline {
         stage('Create Image and upload to Docker hub') {
             steps {
                 script {
-                    sh "docker build -t apache-dep ./${env.JOB_NAME}"
-                    sh "docker tag apache-dep apache-dep-${currentBuild.number}"
+                    sh "docker build -t ${imageName} ./${env.JOB_NAME}"
+                    sh "docker tag ${imageName} ${imageName}-${currentBuild.number}"
                     /*sh "docker push apache-dep-${currentBuild.number}"*/
                 }
             }
@@ -113,6 +113,7 @@ pipeline {
                             sh "sed -i 's/\${containerPort}/$containerPort/' ${env.JOB_NAME}/deployment.yaml ${env.JOB_NAME}/service.yaml"
                             sh "sed -i 's/\${webAddress}/$webAddress/' ${env.JOB_NAME}/ingress.yaml"
                             sh "sed -i 's/\${svcPort}/$svcPort/' ${env.JOB_NAME}/ingress.yaml ${env.JOB_NAME}/service.yaml"
+                            sh "sed -i 's/\${imageName}/$imageName-${currentBuild.number}/' ${env.JOB_NAME}/deployment.yaml"
 
                             sh "kubectl apply -f ${env.JOB_NAME}/deployment.yaml"
                             sh "kubectl apply -f ${env.JOB_NAME}/service.yaml"
