@@ -59,6 +59,7 @@ pipeline {
                 script {
                     sh "docker build -t apache-dep ./${env.JOB_NAME}"
                     sh "docker tag apache-dep apache-dep-${currentBuild.number}"
+                    /*sh "docker push apache-dep-${currentBuild.number}"*/
                 }
             }
         }
